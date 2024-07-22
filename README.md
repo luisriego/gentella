@@ -1,106 +1,99 @@
-<p align="center"><img alt="symfony logo" src="https://symfony.com/images/logos/header-logo.svg"></p>
+# docker-dev-env-for-symfony
+(Cloned from @juanwilde github)
 
-# **Symfony 6 backoffice with Gentella Free Bootstrap 4 Admin Dashboard Template**
+This repository contains the basic configuration for a complete local environment for Symfony projects
 
-Gentelella A skeleton application with user account functionality on the foundation of the Symfony 5 framework, Twitter Bootstrap and Gentelella template .
+### Content:
+- NGINX 1.19 container to handle HTTP requests
+- PHP 8.1.1 container to host your Symfony application
+- MySQL 8.0 container to store databases
+- Postgres 14 container to store databases
 
-## Theme Demo
-![Gentelella Bootstrap Admin Template](https://colorlib.com/wp/wp-content/uploads/sites/2/gentelella-admin-template-preview.jpg
-"Gentelella Theme Browser Preview")
-**[Template Demo](https://colorlib.com/polygon/gentelella/index.html)**
+(feel free to update any version in `Dockerfiles` and ports in `docker-compose.yml`)
 
+### Installation:
+- Run `make build` to create all containers
+- Run `make start` to initiate all the containers
+- Enter the PHP container with `make ssh-be`
+- Install your favourite Symfony version with `composer create-project symfony/skeleton:"6.1.*" my_project_directory`
+- Move the content to the root folder with `mv project/* . && mv project/.env .`. This is necessary since Composer won't install the project if the folder already contains data.
+- Copy the content from `project/.gitignore` and paste it in the root's folder `.gitignore`
+- Remove `project` folder (not needed anymore)
+- Navigate to `localhost:1000` so you can see the Symfony welcome page :)
 
-
-# **Features**
-- Administration Dashboard with Gentelella Admin Theme
-- Responsive Layout
-- Bootstrap 4
-- USER/ROLES CRUD with ajax and symfony form system 
-- Password reset and send email, with link to reset the password
-- Authentication system
-- Powerful blog management module (CRUD, Change histrory, file upload access control for Writers and Editors )
-- FAQ module
-- Translation functionality (Easy to set up whatever language you need/use)
-
-# **Requirements**
-- PHP >= 8 (8.2.4 used in composer.json)
-- Symfony- 6.2.*
-- MySQL
-
-**Recent Updates**
-- removed sec check : **OK**
-- upgraded to symfony 5.4 : **OK**
-- next remove depreciations : **OK**
-- new symfony security **OK**
-- fix data fixtures **OK**
-- PHP 8 compatible **OK**
-- Annotations replacement for attribute **OK**
-- Entities properties are typed now
-- **UPDATED TO SYMFONY 6**
-- Add FAQ
-
-# **Credits**
-- [Gentelella](https://github.com/ColorlibHQ/gentelella) - Admin template project is developed and maintained by [Colorlib](https://colorlib.com/ "Colorlib - Make Your First Blog") and Aigars Silkalns
-- Mamour Wane (Mamless) co-founder of [ONETECHSN](https://onetechsn.com) designed and maintened the project so far
-
-# **Third party tools**
-- [Rector](https://github.com/rectorphp/rector) nice php open source tool to help upgrade code be compatible with higher version of framework and languages
-- [PHP-CS-Fixer](https://github.com/PHP-CS-Fixer/PHP-CS-Fixer) nice php open source tool fixes your code to follow standards (refactor)
-
-## License information
-Gentelella is licensed under The MIT License (MIT). Which means that you can use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software. But you always need to state that Colorlib is the original author of this template.
-
-# **SETUP**
-1 - Install all dependencies :
-
-~~~
-    composer install
-~~~
+### Alternatively may install:
+- Run `make build` to create all the containers
+- Run `make start` to initiate all the containers
+- Enter the PHP container with `make ssh-be`
+- Check the requirements with `symfony check:requirements`
+- Install your favourite Symfony version with `symfony new my_project_directory --version="6.1.*"`
+  - the version options are: ('lts', 'stable', 'next' or 'previous'
+  - the project skeleton options are: ('--demo', '--full', '--webapp' or nothing by the minimum installation)
+- Move the content to the root folder with `mv project/* . && mv project/.env .`. This is necessary since Composer won't install the project if the folder already contains data.
+- Copy the content from `project/.gitignore` and paste it in the root's folder `.gitignore`
+- Remove `project` folder (not needed anymore)
+- Navigate to `localhost:1000` so you can see the Symfony welcome page :)
 
 
-2 - Create database using the next command:
-~~~
-    php bin/console doctrine:schema:create
-~~~
+.env configuration by orm and rabbitmq
+
+    ###> doctrine/doctrine-bundle ###
+    # DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
+    #DATABASE_URL="mysql://root:root@codenip-php81-symfony54-mysql:3306/mysql_symfony?serverVersion=8.0"
+    DATABASE_URL="postgresql://user:passwd@codenip-php81-symfony54-postgres:5432/postgres_symfony?serverVersion=14&charset=utf8"
+    ###< doctrine/doctrine-bundle ###
+    
+    ###> symfony/messenger ###
+    # Choose one of the transports below
+    # MESSENGER_TRANSPORT_DSN=doctrine://default
+    MESSENGER_TRANSPORT_DSN=amqp://guest:guest@docker-dev-env-for-symfony-rabbitmq:5672/%2f/messages
+    # MESSENGER_TRANSPORT_DSN=redis://localhost:6379/messages
+    ###< symfony/messenger ###
+
+Happy coding!
+
+### For testing
+- Insert phpunit testing with composer 'composer require --dev phpunit/phpunit symfony/test-pack'
+- Run `sf d:m:m -n --env=test` to apply migrations on test enviroment
+
+composer dump-autoload --- when not found files after rename it
+
+If .pem has access problems: 'chmod 644 public.pem private.pem'
+
+#### To php cs-fixer
+to install:
+    
+    composer require --dev friendsofphp/php-cs-fixer
+to exec:
+
+    vendor/bin/php-cs-fixer fix src
+
+### SQL Try
+https://stackoverflow.com/questions/68380201/booking-system-using-query-builder-and-symfony
+
+```
+$subQueryBuilder = $this->getEntityManager()->createQueryBuilder();
+        $subQuery = $subQueryBuilder
+            ->select('prop.id')
+            ->from('App:Reservation', 'reservation')
+            ->orWhere('reservation.startDate BETWEEN :checkInDate AND :checkOutDate')
+            ->orWhere('reservation.endDate BETWEEN :checkInDate AND :checkOutDate')
+            ->orWhere('reservation.startDate <= :checkInDate AND reservation.endDate >= :checkOutDate')
+            ->andWhere('reservation.confirmedAt IS NOT NULL')
+            ->andWhere('reservation.rating IS NULL')
+            ->innerJoin('reservation.property', 'prop')
+        ;
+        
+  $properties = $this->createQueryBuilder('p')
+        ->select('p')
+        ->andWhere('p.approved = 1')
+        ->andWhere($properties->expr()->notIn('p.id',  $subQuery->getDQL()))
+        ->andWhere('reservations.confirmedAt IS NOT NULL')
+        ->andWhere('reservations.rating IS NULL')
+        ->setParameter('checkInDate', new \DateTime($checkIn))
+        ->setParameter('checkOutDate', new \DateTime($checkOut))
+        ->innerJoin('p.reservations', 'reservations')
+        ->getQuery();
+```
 
 
-3 - You will need to populate your database using fixtures for login.
-
-Run:
-
-~~~
-    php bin/console doctrine:fixtures:load
-~~~
-
-And use the next credentials to login.
-
-- Username : "admin"
-- Password : "admin"
-
-**ENJOY**
-
-**Latest Updates 15/07/2024 (long time no see)**
-- Add rate limiter for password
-- Add a new concept of profile for users instead of directly giving roles to user , we create a profile with a set of roles and then link it to the user , now each controller method and each action on twig templates is secured by a dedicated role, the role system is completely configurable as pleased. But we can steal give users roles directly 
-- Data fixtures contains all the new roles
-
-**Recent Updates**
-- removed sec check : **OK**
-- upgraded to symfony 5.4 : **OK**
-- next remove depreciations : **OK**
-- new symfony security **ok**
-- fix data fixtures **ok**
-- PHP 8 compatible **ok**
-- Annotations replacement for attribute **ok**
-- Entities properties are typed now
-***
-** Updates coming **
-- Add contact module : 
-- - Read messages in an inbox style **ok**
-- - Sort by date and read status
-- - Research in contacts
-- - load mail with ajax
-- Add faker to generate fake data 
-- add SEO fields to each entity
-- ~~upgrade to symfony 6.4 (the LTS version november 2023)~~
-- upgrade to symfony 7 
